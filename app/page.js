@@ -3,24 +3,49 @@
 import { useState } from "react";
 
 export default function Home() {
-  const [person, setPerson] = useState(null);
-  const [clothes, setClothes] = useState(null);
+  const [personImage, setPersonImage] = useState(null);
+  const [clothesImage, setClothesImage] = useState(null);
+
+  function handlePersonImage(event) {
+    const file = event.target.files?.[0];
+    if (file) {
+      setPersonImage(URL.createObjectURL(file));
+    }
+  }
+
+  function handleClothesImage(event) {
+    const file = event.target.files?.[0];
+    if (file) {
+      setClothesImage(URL.createObjectURL(file));
+    }
+  }
 
   return (
     <main
       style={{
         minHeight: "100vh",
-        background: "#f7f4f2",
+        background: "#f4f4f4",
+        padding: "30px 15px",
         fontFamily: "Arial, sans-serif",
-        padding: "30px 20px",
         textAlign: "center",
       }}
     >
-      <h1 style={{ fontSize: "38px", marginBottom: "5px" }}>
+      <h1
+        style={{
+          fontSize: "38px",
+          marginBottom: "5px",
+        }}
+      >
         LOOKONME
       </h1>
 
-      <p style={{ color: "#666", marginBottom: "35px" }}>
+      <p
+        style={{
+          color: "#666",
+          marginBottom: "30px",
+          fontSize: "18px",
+        }}
+      >
         AI Virtual Try-On
       </p>
 
@@ -31,49 +56,99 @@ export default function Home() {
           background: "white",
           padding: "25px",
           borderRadius: "20px",
+          boxShadow: "0 5px 20px rgba(0,0,0,0.08)",
         }}
       >
-        <h2>Примерьте одежду онлайн</h2>
+        <h2>1. Upload your photo</h2>
 
-        <p>Загрузите своё фото</p>
+        <label
+          style={{
+            display: "block",
+            padding: "15px",
+            margin: "15px 0",
+            background: "#111",
+            color: "white",
+            borderRadius: "12px",
+            cursor: "pointer",
+          }}
+        >
+          Choose photo
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handlePersonImage}
+            style={{ display: "none" }}
+          />
+        </label>
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setPerson(e.target.files[0])}
-        />
-
-        {person && (
-          <p style={{ color: "green" }}>✓ Фото загружено</p>
+        {personImage && (
+          <img
+            src={personImage}
+            alt="Person"
+            style={{
+              width: "100%",
+              maxHeight: "400px",
+              objectFit: "contain",
+              borderRadius: "12px",
+              marginBottom: "25px",
+            }}
+          />
         )}
 
-        <p style={{ marginTop: "30px" }}>
-          Загрузите фото одежды
-        </p>
+        <h2>2. Upload clothing</h2>
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setClothes(e.target.files[0])}
-        />
+        <label
+          style={{
+            display: "block",
+            padding: "15px",
+            margin: "15px 0",
+            background: "#111",
+            color: "white",
+            borderRadius: "12px",
+            cursor: "pointer",
+          }}
+        >
+          Choose clothing
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleClothesImage}
+            style={{ display: "none" }}
+          />
+        </label>
 
-        {clothes && (
-          <p style={{ color: "green" }}>✓ Одежда загружена</p>
+        {clothesImage && (
+          <img
+            src={clothesImage}
+            alt="Clothing"
+            style={{
+              width: "100%",
+              maxHeight: "400px",
+              objectFit: "contain",
+              borderRadius: "12px",
+              marginBottom: "25px",
+            }}
+          />
         )}
 
         <button
+          disabled={!personImage || !clothesImage}
           style={{
-            marginTop: "35px",
             width: "100%",
             padding: "16px",
+            marginTop: "10px",
             border: "none",
             borderRadius: "12px",
-            background: "black",
-            color: "white",
             fontSize: "18px",
+            fontWeight: "bold",
+            cursor:
+              personImage && clothesImage ? "pointer" : "not-allowed",
+            background:
+              personImage && clothesImage ? "#111" : "#cccccc",
+            color: "white",
           }}
         >
-          Примерить
+          Try On
         </button>
       </div>
     </main>
