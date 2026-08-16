@@ -3,37 +3,94 @@
 import { useState } from "react";
 
 export default function Home() {
-  const [personImage, setPersonImage] = useState(null);
-  const [clothesImage, setClothesImage] = useState(null);
+  const [personFile, setPersonFile] = useState(null);
+  const [clothesFile, setClothesFile] = useState(null);
+
+  const [personPreview, setPersonPreview] = useState(null);
+  const [clothesPreview, setClothesPreview] = useState(null);
+
+  const [loading, setLoading] = useState(false);
+  const [resultImage, setResultImage] = useState(null);
+  const [error, setError] = useState("");
 
   function handlePersonImage(event) {
     const file = event.target.files?.[0];
+
     if (file) {
-      setPersonImage(URL.createObjectURL(file));
+      setPersonFile(file);
+      setPersonPreview(URL.createObjectURL(file));
+      setResultImage(null);
+      setError("");
     }
   }
 
   function handleClothesImage(event) {
     const file = event.target.files?.[0];
+
     if (file) {
-      setClothesImage(URL.createObjectURL(file));
+      setClothesFile(file);
+      setClothesPreview(URL.createObjectURL(file));
+      setResultImage(null);
+      setError("");
     }
   }
+
+  async function handleTryOn() {
+    if (!personFile || !clothesFile) {
+      setError("Please upload both photos.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setResultImage(null);
+
+    try {
+      const formData = new FormData();
+
+      formData.append("person", personFile);
+      formData.append("clothes", clothesFile);
+
+      const response = await fetch("/api/tryon", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Virtual try-on failed.");
+      }
+
+      if (!data.result) {
+        throw new Error("No result image was returned.");
+      }
+
+      setResultImage(data.result);
+    } catch (err) {
+      setError(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const canTryOn = Boolean(personFile && clothesFile && !loading);
 
   return (
     <main
       style={{
         minHeight: "100vh",
-        background: "#f4f4f4",
-        padding: "30px 15px",
+        background: "#1c1c1c",
+        color: "white",
+        padding: "35px 20px 70px",
         fontFamily: "Arial, sans-serif",
         textAlign: "center",
       }}
     >
       <h1
         style={{
-          fontSize: "38px",
-          marginBottom: "5px",
+          fontSize: "42px",
+          marginBottom: "10px",
         }}
       >
         LOOKONME
@@ -41,9 +98,9 @@ export default function Home() {
 
       <p
         style={{
-          color: "#666",
-          marginBottom: "30px",
-          fontSize: "18px",
+          color: "#aaa",
+          fontSize: "20px",
+          marginBottom: "60px",
         }}
       >
         AI Virtual Try-On
@@ -53,10 +110,6 @@ export default function Home() {
         style={{
           maxWidth: "500px",
           margin: "0 auto",
-          background: "white",
-          padding: "25px",
-          borderRadius: "20px",
-          boxShadow: "0 5px 20px rgba(0,0,0,0.08)",
         }}
       >
         <h2>1. Upload your photo</h2>
@@ -64,15 +117,15 @@ export default function Home() {
         <label
           style={{
             display: "block",
-            padding: "15px",
-            margin: "15px 0",
-            background: "#111",
-            color: "white",
-            borderRadius: "12px",
+            background: "#000",
+            padding: "18px",
+            borderRadius: "14px",
             cursor: "pointer",
+            marginBottom: "16px",
           }}
         >
           Choose photo
+
           <input
             type="file"
             accept="image/*"
@@ -81,16 +134,16 @@ export default function Home() {
           />
         </label>
 
-        {personImage && (
+        {personPreview && (
           <img
-            src={personImage}
-            alt="Person"
+            src={personPreview}
+            alt="Your preview"
             style={{
               width: "100%",
-              maxHeight: "400px",
+              maxHeight: "520px",
               objectFit: "contain",
-              borderRadius: "12px",
-              marginBottom: "25px",
+              borderRadius: "14px",
+              marginBottom: "45px",
             }}
           />
         )}
@@ -100,15 +153,15 @@ export default function Home() {
         <label
           style={{
             display: "block",
-            padding: "15px",
-            margin: "15px 0",
-            background: "#111",
-            color: "white",
-            borderRadius: "12px",
+            background: "#000",
+            padding: "18px",
+            borderRadius: "14px",
             cursor: "pointer",
+            marginBottom: "16px",
           }}
         >
           Choose clothing
+
           <input
             type="file"
             accept="image/*"
@@ -117,39 +170,68 @@ export default function Home() {
           />
         </label>
 
-        {clothesImage && (
+        {clothesPreview && (
           <img
-            src={clothesImage}
-            alt="Clothing"
+            src={clothesPreview}
+            alt="Clothing preview"
             style={{
               width: "100%",
-              maxHeight: "400px",
+              maxHeight: "520px",
               objectFit: "contain",
-              borderRadius: "12px",
-              marginBottom: "25px",
+              borderRadius: "14px",
+              marginBottom: "35px",
             }}
           />
         )}
 
         <button
-          disabled={!personImage || !clothesImage}
+          type="button"
+          onClick={handleTryOn}
+          disabled={!canTryOn}
           style={{
             width: "100%",
-            padding: "16px",
-            marginTop: "10px",
+            padding: "20px",
             border: "none",
-            borderRadius: "12px",
-            fontSize: "18px",
+            borderRadius: "14px",
+            fontSize: "22px",
             fontWeight: "bold",
-            cursor:
-              personImage && clothesImage ? "pointer" : "not-allowed",
-            background:
-              personImage && clothesImage ? "#111" : "#cccccc",
-            color: "white",
+            cursor: canTryOn ? "pointer" : "not-allowed",
+            background: canTryOn ? "#ffffff" : "#444",
+            color: canTryOn ? "#111" : "#aaa",
           }}
         >
-          Try On
+          {loading ? "Creating your look..." : "Try On"}
         </button>
+
+        {error && (
+          <div
+            style={{
+              marginTop: "25px",
+              padding: "16px",
+              background: "#3b1515",
+              borderRadius: "12px",
+              color: "#ffb3b3",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {resultImage && (
+          <div style={{ marginTop: "45px" }}>
+            <h2>Your new look</h2>
+
+            <img
+              src={resultImage}
+              alt="AI virtual try-on result"
+              style={{
+                width: "100%",
+                borderRadius: "16px",
+                marginTop: "15px",
+              }}
+            />
+          </div>
+        )}
       </div>
     </main>
   );
