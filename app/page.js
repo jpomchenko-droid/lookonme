@@ -168,8 +168,7 @@ export default function Home() {
     fontWeight: "600",
     cursor: "pointer",
   };
-
-  return (
+    return (
     <main
       style={{
         minHeight: "100vh",
@@ -263,4 +262,155 @@ export default function Home() {
           {personPreview && (
             <img
               src={personPreview}
-              alt="
+              alt="Person preview"
+              style={{
+                width: "100%",
+                maxHeight: "520px",
+                objectFit: "contain",
+                background: "#eee",
+                borderRadius: "16px",
+              }}
+            />
+          )}
+        </section>
+
+        <section style={{ marginBottom: "35px" }}>
+          <h2 style={{ textAlign: "center", fontSize: "23px" }}>
+            {t.clothes}
+          </h2>
+
+          <label
+            style={{
+              ...buttonStyle,
+              display: "block",
+              boxSizing: "border-box",
+              textAlign: "center",
+              background: "#fff",
+              color: "#000",
+              margin: "18px 0",
+            }}
+          >
+            {clothesPreview ? t.changeClothes : t.clothesBtn}
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleClothes}
+              style={{ display: "none" }}
+            />
+          </label>
+
+          {clothesPreview && (
+            <img
+              src={clothesPreview}
+              alt="Clothing preview"
+              style={{
+                width: "100%",
+                maxHeight: "520px",
+                objectFit: "contain",
+                background: "#eee",
+                borderRadius: "16px",
+              }}
+            />
+          )}
+        </section>
+
+        <button
+          type="button"
+          onClick={handleTryOn}
+          disabled={loading || !personFile || !clothesFile}
+          style={{
+            ...buttonStyle,
+            background:
+              loading || !personFile || !clothesFile ? "#444" : "#fff",
+            color:
+              loading || !personFile || !clothesFile ? "#aaa" : "#000",
+            marginTop: "10px",
+          }}
+        >
+          {loading ? t.processing : t.tryOn}
+        </button>
+
+        {loading && (
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "18px",
+              background: "#171717",
+              borderRadius: "14px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: "32px",
+                height: "32px",
+                border: "4px solid #444",
+                borderTop: "4px solid white",
+                borderRadius: "50%",
+                margin: "0 auto 15px",
+                animation: "spin 1s linear infinite",
+              }}
+            />
+
+            <strong>{t.processing}</strong>
+
+            <p
+              style={{
+                color: "#aaa",
+                lineHeight: "1.5",
+                marginBottom: 0,
+              }}
+            >
+              {t.wait}
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "15px",
+              background: "#301515",
+              borderRadius: "12px",
+              lineHeight: "1.5",
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        {result && (
+          <section style={{ marginTop: "45px" }}>
+            <h2 style={{ textAlign: "center" }}>{t.result}</h2>
+
+            <img
+              src={result}
+              alt="AI try-on result"
+              style={{
+                width: "100%",
+                marginTop: "15px",
+                borderRadius: "16px",
+                background: "#eee",
+              }}
+            />
+          </section>
+        )}
+
+        <style jsx>{`
+          @keyframes spin {
+            from {
+              transform: rotate(0deg);
+            }
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        `}</style>
+            </div>
+    </main>
+  );
+}
+  );
+}
