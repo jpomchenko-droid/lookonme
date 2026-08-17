@@ -1,5 +1,5 @@
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const BASE_URL = "https://api.fashn.ai/v1";
 
@@ -11,14 +11,34 @@ async function fileToDataUri(file) {
   return `data:${mime};base64,${buffer.toString("base64")}`;
 }
 
+function getErrorMessage(data, fallback) {
+  if (typeof data?.error === "string") {
+    return data.error;
+  }
+
+  if (data?.error?.message) {
+    return data.error.message;
+  }
+
+  if (data?.message) {
+    return data.message;
+  }
+
+  return fallback;
+}
+
 export async function POST(request) {
   try {
     const apiKey = process.env.FASHN_API_KEY;
 
     if (!apiKey) {
       return Response.json(
-        { error: "FASHN_API_KEY is not configured" },
-        { status: 500 }
+        {
+          error: "FASHN_API_KEY is not configured.",
+        },
+        {
+          status: 500,
+        }
       );
     }
 
@@ -27,10 +47,32 @@ export async function POST(request) {
     const person = formData.get("person");
     const clothes = formData.get("clothes");
 
-    if (!person || !clothes) {
+    if (
+      !person ||
+      !clothes ||
+      typeof person.arrayBuffer !== "function" ||
+      typeof clothes.arrayBuffer !== "function"
+    ) {
       return Response.json(
-        { error: "Загрузите фото человека и фото одежды" },
-        { status: 400 }
+        {
+          error: "Please upload both images.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const maxInputSize = 30 * 1024 * 1024;
+
+    if (person.size > maxInputSize || clothes.size > maxInputSize) {
+      return Response.json(
+        {
+          error: "Each image must be smaller than 30 MB.",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
@@ -58,66 +100,127 @@ export async function POST(request) {
       }),
     });
 
-    const runData = await runResponse.json();
+    let runData;
 
-    if (!runResponse.ok || !runData.id) {
+    try {
+      runData = await runResponse.json();
+    } catch {
       return Response.json(
         {
-          error:
-            runData?.error?.message ||
-            runData?.error ||
-            "Не удалось запустить AI-примерку",
+          error: "FASHN returned an invalid response.",
         },
-        { status: runResponse.status || 500 }
+        {
+          status: 502,
+        }
+      );
+    }
+
+    if (!runResponse.ok || !runData?.id) {
+      return Response.json(
+        {
+          error: getErrorMessage(
+            runData,
+            "Could not start the virtual try-on."
+          ),
+        },
+        {
+          status: runResponse.status || 500,
+        }
       );
     }
 
     const predictionId = runData.id;
 
-    for (let attempt = 0; attempt < 20; attempt++) {
+    const startedAt = Date.now();
+    const timeoutMs = 240000;
+
+    while (Date.now() - startedAt < timeoutMs) {
       await new Promise((resolve) => setTimeout(resolve, 3000));
 
       const statusResponse = await fetch(
         `${BASE_URL}/status/${predictionId}`,
-        { headers }
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+          cache: "no-store",
+        }
       );
 
-      const statusData = await statusResponse.json();
+      let statusData;
 
-      if (statusData.status === "completed") {
+      try {
+        statusData = await statusResponse.json();
+      } catch {
+        continue;
+      }
+
+      if (statusData?.status === "completed") {
+        const result = statusData?.output?.[0];
+
+        if (!result) {
+          return Response.json(
+            {
+              error: "The AI completed the request but returned no image.",
+            },
+            {
+              status: 502,
+            }
+          );
+        }
+
         return Response.json({
           success: true,
-          result: statusData.output?.[0],
+          result,
+          predictionId,
         });
       }
 
       if (
-        !["starting", "in_queue", "processing"].includes(
-          statusData.status
+        ["starting", "in_queue", "processing"].includes(
+          statusData?.status
         )
       ) {
+        continue;
+      }
+
+      if (statusData?.status) {
         return Response.json(
           {
-            error:
-              statusData?.error?.message ||
-              statusData?.error ||
-              "AI-примерка завершилась с ошибкой",
+            error: getErrorMessage(
+              statusData,
+              `Virtual try-on failed: ${statusData.status}`
+            ),
           },
-          { status: 500 }
+          {
+            status: 500,
+          }
         );
       }
     }
 
     return Response.json(
-      { error: "Примерка занимает слишком много времени. Попробуйте ещё раз." },
-      { status: 504 }
+      {
+        error:
+          "The AI is still processing the image. Please try again in a moment.",
+      },
+      {
+        status: 504,
+      }
     );
   } catch (error) {
-    console.error(error);
+    console.error("LOOKONME try-on error:", error);
 
     return Response.json(
-      { error: error.message || "Ошибка сервера" },
-      { status: 500 }
+      {
+        error:
+          error?.message ||
+          "An unexpected server error occurred.",
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
